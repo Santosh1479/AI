@@ -28,8 +28,8 @@ def build_feature_database(root_folder):
     return feature_database
 
 # Path to the root folder containing the images
-root_folder = 'e:\\AI\\Diseases_names'
-feature_database_path = 'e:\\AI\\data\\feature_database.pkl'
+root_folder = 'C:/Users/Santosh/Desktop/New folder (2)/AI/data/Diseases_names'
+feature_database_path = 'C:/Users/Santosh/Desktop/New folder (2)/AI/data/feature_database.pkl'
 
 # Display the root folder containing the images
 print(f"Root folder containing the images: {root_folder}")

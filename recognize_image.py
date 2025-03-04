@@ -19,11 +19,11 @@ def find_similar_images(input_image_path, feature_database, top_n=5):
     return similarity_scores[:top_n]
 
 # Load the feature database using pickle
-with open('e:\\AI\\data\\feature_database.pkl', 'rb') as f:
+with open('C:/Users/Santosh/Desktop/New folder (2)/AI/data/feature_database.pkl', 'rb') as f:
     feature_database = pickle.load(f)
 
 # Path to the input image
-input_image_path = 'e:\\AI\\input_image'
+input_image_path = 'C:/Users/Santosh/Desktop/New folder (2)/AI/input_image'
 
 # Iterate through all images in the input images folder
 for input_filename in os.listdir(input_image_path):

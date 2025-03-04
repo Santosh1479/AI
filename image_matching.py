@@ -4,7 +4,7 @@ import pickle
 from recognize_image import find_similar_images
 
 # Load dataset
-dataset = pd.read_csv('e:\\AI\\data\\dataset.csv')
+dataset = pd.read_csv('C:/Users/Santosh/Desktop/New folder (2)/AI/data/dataset.csv')
 
 # Fill NaN values with empty strings
 dataset = dataset.fillna('')
@@ -46,17 +46,17 @@ def find_disease(symptoms):
     return matching_diseases
 
 # Path to the root folder containing the images
-root_folder = 'e:\\AI\\Diseases_names'
+root_folder = 'C:/Users/Santosh/Desktop/New folder (2)/AI/data/Diseases_names'
 
 # Path to the input images folder
-input_images_folder = 'e:\\AI\\input_image'
+input_images_folder = 'C:/Users/Santosh/Desktop/New folder (2)/AI/data/input_image'
 
 # Check if the input images folder exists
 if not os.path.exists(input_images_folder):
     print(f"Error: The input images folder '{input_images_folder}' does not exist.")
 else:
     # Load the feature database using pickle
-    with open('e:\\AI\\data\\feature_database.pkl', 'rb') as f:
+    with open('C:/Users/Santosh/Desktop/New folder (2)/AI/data/feature_database.pkl', 'rb') as f:
         feature_database = pickle.load(f)
 
     predicted_diseases = []

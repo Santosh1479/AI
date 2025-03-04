@@ -1,7 +1,16 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import pandas as pd
+import os
+import pickle
+from werkzeug.utils import secure_filename
+from recognize_image import find_similar_images
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS
 
 # Load dataset
-dataset = pd.read_csv('e:\\AI\\data\\dataset.csv')
+dataset = pd.read_csv('C:/Users/Santosh/Desktop/New folder (2)/AI/data/dataset.csv')
 
 # Fill NaN values with empty strings
 dataset = dataset.fillna('')
@@ -42,22 +51,72 @@ def find_disease(symptoms):
     
     return matching_diseases
 
-# Display sample symptoms
-print("\nSample symptoms from dataset:")
-sample_symptoms = list(set().union(*disease_symptom_map.values()))  # Get all unique symptoms
-print(", ".join(sample_symptoms[:10]))  # Show first 10 symptoms
+@app.route('/diagnosis', methods=['POST'])
+def diagnose():
+    data = request.json
+    user_input = data.get('input', '')
+    user_symptoms = [symptom.strip() for symptom in user_input.split(',') if symptom.strip()]
+    
+    matching_diseases = find_disease(user_symptoms)
+    
+    if matching_diseases:
+        return jsonify({'disease': matching_diseases[0][0]})
+    else:
+        return jsonify({'disease': 'No disease found matching the provided symptoms'})
 
-# Prompt user for symptoms input
-user_input = input("\nEnter the symptoms separated by commas: ").strip().lower()
-user_symptoms = [symptom.strip() for symptom in user_input.split(',') if symptom.strip()]  # Remove empty inputs
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+    
+    image = request.files['image']
+    if image.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    
+    filename = secure_filename(image.filename)
+    image_path = os.path.join('e:/AI/input_image', filename)
+    image.save(image_path)
+    
+    # Call the image matching function
+    result = process_image(image_path)
+    
+    return jsonify(result)
 
-# Find matching diseases
-matching_diseases = find_disease(user_symptoms)
+def process_image(image_path):
+    # Load the feature database using pickle
+    with open('e:/AI/data/feature_database.pkl', 'rb') as f:
+        feature_database = pickle.load(f)
 
-if matching_diseases:
-    print(f"\n🔹 Disease Found: **{matching_diseases[0][0]}**")  # Best match
-    print("\nMatching Diseases (Based on Symptom Match %):")
-    for disease, score in matching_diseases[:5]:  # Show top 5 matches
-        print(f"- {disease}: {score:.2f}% match")
-else:
-    print("\n No disease found matching the provided symptoms.")
+    highest_similarity_score = 0
+    folder_info = {}  # Store max scores and proper folder names
+    image_with_100_percent = None
+
+    similar_images = find_similar_images(image_path, feature_database)
+    
+    for sim_filename, score in similar_images:
+        full_path = os.path.dirname(sim_filename)
+        folder_name = os.path.basename(full_path)
+        
+        if full_path not in folder_info or score > folder_info[full_path]['max_score']:
+            folder_info[full_path] = {
+                'display_name': folder_name.split('(')[0].strip() if score < 100 else folder_name,
+                'max_score': score
+            }
+
+        if score > highest_similarity_score:
+            highest_similarity_score = score
+            highest_similarity_folder = folder_name
+
+        if score == 100:
+            image_with_100_percent = sim_filename
+
+    if image_with_100_percent:
+        image_name = os.path.basename(image_with_100_percent)
+        image_name = os.path.splitext(image_name)[0]  # Remove file extension
+        image_name = ''.join([i for i in image_name if not i.isdigit()])  # Remove numbers
+        return {'disease': image_name}
+    else:
+        return {'disease': 'No disease found with 100% probability'}
+
+if __name__ == '__main__':
+    app.run(debug=True)

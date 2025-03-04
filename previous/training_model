@@ -1,0 +1,95 @@
+import os
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Dropout
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Load dataset
+dataset = pd.read_csv('e:\\AI\\data\\dataset.csv')
+
+# Preprocess the dataset
+# Convert categorical labels to numerical values
+dataset['Disease'] = dataset['Disease'].astype('category').cat.codes
+
+# Define features (X) and target (y)
+X = dataset.drop(columns=['Disease'])
+y = dataset['Disease']
+
+# Handle missing values
+X.fillna(0, inplace=True)
+
+# Convert categorical symptoms to numerical values
+X = pd.get_dummies(X)
+
+# Split into training and testing sets (80-20 split)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Normalize numerical features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Define the model architecture
+model = Sequential([
+    Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+    Dropout(0.3),
+    Dense(64, activation='relu'),
+    Dropout(0.2),
+    Dense(len(y.unique()), activation='softmax')  # Output layer for multi-class classification
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Check if the model already exists
+model_path = 'ai_healthcare_model.keras'
+if os.path.exists(model_path):
+    # Load the trained model
+    model = load_model(model_path)
+    print("Model loaded successfully!")
+else:
+    # Train the model
+    history = model.fit(X_train, y_train, epochs=50, batch_size=16, validation_data=(X_test, y_test), verbose=1)
+
+    # Evaluate the model
+    loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+    print(f"Model Accuracy: {accuracy * 100:.2f}%")
+
+    # Save the trained model
+    model.save(model_path)
+    print("Model saved successfully!")
+
+# Find disease based on symptoms with at least 80% accuracy
+def find_disease(symptoms):
+    for index, row in dataset.iterrows():
+        disease_symptoms = row[1:].dropna().values
+        match_count = sum(1 for symptom in symptoms if symptom in disease_symptoms)
+        match_percentage = match_count / len(disease_symptoms)
+        if match_percentage >= 0.8:
+            return row['Disease']
+    return None
+
+# Display sample symptoms
+print("Sample symptoms to be entered (separated by commas):")
+sample_symptoms = dataset.iloc[:, 1:].dropna(axis=1, how='all').columns.tolist()
+print(", ".join(sample_symptoms[:10]))  # Display first 10 symptoms as a sample
+
+# Prompt user for symptoms input
+user_symptoms = input("Enter the symptoms separated by commas: ").split(',')
+
+# Find the disease based on user symptoms
+disease_code = find_disease([symptom.strip() for symptom in user_symptoms])
+
+if disease_code is not None:
+    # Convert the numerical disease code back to the disease name
+    disease_name = dataset['Disease'].astype('category').cat.categories[disease_code]
+    print(f"\nDisease found: {disease_name}")
+else:
+    print("\nNo disease found matching the provided symptoms with at least 80% accuracy.")
+    print("The symptoms you entered are:")
+    for symptom in user_symptoms:
+        print(f"- {symptom.strip()}")

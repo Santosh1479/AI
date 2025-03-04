@@ -1,0 +1,11 @@
+age,gender,blood_pressure,glucose,bmi,diagnosis
+45,Male,120,85,24.5,1
+50,Female,130,95,28.1,0
+39,Male,110,80,22.3,0
+60,Female,140,105,31.4,1
+55,Male,135,100,29.8,1
+42,Female,125,90,26.7,0
+48,Male,128,92,27.5,0
+52,Female,132,98,30.2,1
+47,Male,118,88,23.9,0
+59,Female,138,102,32.1,1

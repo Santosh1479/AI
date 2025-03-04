@@ -1,0 +1,143 @@
+
+training_data=[
+    ['Green', 3, 'Mango'],
+    ['Yellow', 3, 'Mango'],
+    ['Red', 1, 'Grape'],
+    ['Red', 1, 'Grape'],
+    ['Yellow', 3, 'Lemon'],
+]
+
+head=["color","diameter","label"]
+
+def uniq_vals(rows, col):
+    return set([row[col]for row in rows])
+
+def class_coun(rows):
+    counts = {}
+    for row in rows:
+        label = row[-1]
+        if label not in counts:
+            counts[label] = 0
+        counts[label] +=1
+    return counts
+
+def is_num(value):
+    return isinstance(value , int) or isinstance(value, float)
+
+
+class Question:
+    def __init__(self, col, val):
+        self.column = col
+        self.value = val
+
+    def match(self, example):
+        val = example[self.column]
+        if is_num(val):
+            return val>=self.value
+        else:
+            return val==self.value
+
+    def __repr__(self):
+        cond = "=="
+        if is_num(self.value):
+            cond = '>='
+        return "Is %s %s %s?"%(head[self.column],cond, str(self.value))
+
+
+
+def partition(rows, ques):
+
+    true_rows,false_rows = [],[]
+    for row in rows:
+        if ques.match(row):
+            true_rows.append(row)
+        else:
+            false_rows.append(row)
+    return true_rows, false_rows
+
+def gini(rows):
+    counts = class_coun(rows)
+    impurity = 1
+    for label in counts:
+        prob_label = counts[label]/float(len(rows))
+        impurity -=prob_label**2
+    return impurity
+
+
+
+def info_gain(left, right, curr_uncert):
+    p = float(len(left))/(len(left)+len(right))
+    return curr_uncert-p*gini(left) - (1-p)*gini(right)
+
+def best_split(rows):
+    best_gain = 0
+    best_ques=None
+    curr_uncert = gini(rows)
+    n_features = len(rows[0])-1
+
+    for col in range(n_features):
+
+        vals = str([row[col]for row in rows])
+
+        for val in vals:
+            ques = Question(col, val)
+
+            true_rows, false_rows = partition(rows, ques)
+            if len(true_rows)==0 or len(false_rows)==0:
+                continue
+
+            gain = info_gain(true_rows, false_rows, curr_uncert)
+
+            if gain>=best_gain:
+                best_gain, best_ques = gain,ques
+    return best_gain, best_ques
+
+
+
+class Leaf:
+    def __init__(self, rows):
+        self.pred = class_coun(rows)
+
+class Descision_Node:
+    def __init__(self, ques, true_branch, false_branch):
+        self.question=ques
+        self.true_branch= true_branch
+        self.false_branch= false_branch
+
+def build_tree(rows):
+    gain, ques = best_split(rows)
+    if gain==0:
+        return Leaf(rows)
+    true_rows, false_rows = partition(rows,  ques)
+    true_branch = build_tree(true_rows)
+    false_branch = build_tree(false_rows)
+
+    return Descision_Node(ques, true_branch, false_branch)
+
+def print_tree(node, spacing=""):
+    if isinstance(node, Leaf):
+        print(spacing+"predict",node.pred)
+        return
+    
+    print(spacing +str(node.ques))
+    
+    print(spacing +'---> True')
+    print_tree(node.true_branch, spacing +"  ")
+    
+    print(spacing +'---> False')
+    print_tree(node.false_branch, spacing +"  ")
+
+
+def classify(row, node):
+    if isinstance(node, Leaf):
+        return classify(row, node.true_branch)
+    else:
+        return classify(row, node.false_branch)
+    
+
+def print_leaf(counts):
+    total= sum(counts.values())*1.0
+    probs={}
+    for label in counts.keys():
+        probs[label] = str(int(counts[label]/total*100))+'%'
+    return probs

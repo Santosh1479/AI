@@ -1,0 +1,8 @@
+PatientID,Name,Age,Gender,Diagnosis,Medication,Doctor,LastVisit,NextAppointment
+101,John Doe,45,Male,Hypertension,Lisinopril,Dr. Smith,2024-02-15,2024-03-20
+102,Jane Smith,37,Female,Diabetes,Metformin,Dr. Johnson,2024-02-20,2024-03-25
+103,Michael Brown,52,Male,Asthma,Albuterol,Dr. Lee,2024-02-18,2024-03-22
+104,Emily Davis,29,Female,Migraine,Sumatriptan,Dr. Williams,2024-02-10,2024-03-15
+105,David Wilson,60,Male,Arthritis,Ibuprofen,Dr. Thomas,2024-02-05,2024-03-12
+106,Sophia Martinez,33,Female,Anxiety,Sertraline,Dr. Anderson,2024-02-28,2024-03-30
+107,Daniel Taylor,40,Male,High Cholesterol,Atorvastatin,Dr. Garcia,2024-02-22,2024-03-28

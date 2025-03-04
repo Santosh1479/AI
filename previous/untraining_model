@@ -1,0 +1,138 @@
+import pandas as pd
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+
+# Load datasets
+dataset = pd.read_csv('e:\\AI\\data\\dataset.csv')
+symptom_precaution = pd.read_csv('e:\\AI\\data\\symptom_precaution.csv')
+symptom_description = pd.read_csv('e:\\AI\\data\\symptom_Description.csv')
+symptom_severity = pd.read_csv('e:\\AI\\data\\Symptom-severity.csv')
+
+# Preprocess the dataset
+# Convert categorical labels to numerical values
+dataset['Disease'] = dataset['Disease'].astype('category').cat.codes
+
+# Define features (X) and target (y)
+X = dataset.drop(columns=['Disease'])
+y = dataset['Disease']
+
+# Handle missing values
+X.fillna(0, inplace=True)
+
+# Convert categorical symptoms to numerical values
+X = pd.get_dummies(X)
+
+# Split into training and testing sets (80-20 split)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Normalize numerical features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Define the model architecture
+model = Sequential([
+    Dense(128, activation='relu', input_shape=(X_train.shape[1],)),
+    Dropout(0.3),
+    Dense(64, activation='relu'),
+    Dropout(0.2),
+    Dense(len(y.unique()), activation='softmax')  # Output layer for multi-class classification
+])
+
+# Compile the model
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Train the model
+history = model.fit(X_train, y_train, epochs=50, batch_size=16, validation_data=(X_test, y_test), verbose=1)
+
+# Evaluate the model
+loss, accuracy = model.evaluate(X_test, y_test, verbose=0)
+print(f"Model Accuracy: {accuracy * 100:.2f}%")
+
+# Save the trained model
+model.save('ai_healthcare_model.h5')
+print("Model saved successfully!")
+
+# Analyze symptom precautions
+def analyze_precautions(disease):
+    precautions = symptom_precaution[symptom_precaution['Disease'] == disease]
+    if not precautions.empty:
+        print(f"\nPrecautions for {disease}:")
+        for col in precautions.columns[1:]:
+            if pd.notna(precautions[col].values[0]):
+                print(f"- {precautions[col].values[0]}")
+    else:
+        print(f"\nNo precautions found for {disease}.")
+
+# Show symptom descriptions
+def show_description(disease):
+    description = symptom_description[symptom_description['Disease'] == disease]
+    if not description.empty:
+        print(f"\nDescription of {disease}:")
+        print(description['Description'].values[0])
+    else:
+        print(f"\nNo description found for {disease}.")
+
+# Show symptom severity
+def show_severity(disease):
+    symptoms = dataset[dataset['Disease'] == disease].iloc[:, 1:].values.flatten()
+    symptoms = [symptom for symptom in symptoms if pd.notna(symptom)]
+    print(f"\nSeverity of symptoms for {disease}:")
+    for symptom in symptoms:
+        severity = symptom_severity[symptom_severity['Symptom'] == symptom]
+        if not severity.empty:
+            print(f"- {symptom}: {severity['weight'].values[0]}")
+        else:
+            print(f"- {symptom}: No severity data available")
+
+# Find disease based on symptoms with at least 80% accuracy
+def find_disease(symptoms):
+    for index, row in dataset.iterrows():
+        disease_symptoms = row[1:].dropna().values
+        match_count = sum(1 for symptom in symptoms if symptom in disease_symptoms)
+        match_percentage = match_count / len(disease_symptoms)
+        if match_percentage >= 0.8:
+            return row['Disease']
+    return None
+
+# Fetch disease information from open source
+def fetch_disease_info(symptoms):
+    try:
+        response = requests.get('https://api.diseaseinfo.com/find_disease', params={'symptoms': ','.join(symptoms)})
+        response.raise_for_status()  # Raise an exception for HTTP errors
+        data = response.json()
+        if data:
+            return data.get('disease')
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data from open source: {e}")
+    except ValueError:
+        print("Invalid JSON response received from open source.")
+    return None
+
+# Prompt user for symptoms input
+user_symptoms = input("Enter the symptoms separated by commas: ").split(',')
+
+# Find the disease based on user symptoms
+disease_to_analyze = find_disease([symptom.strip() for symptom in user_symptoms])
+
+if disease_to_analyze:
+    print(f"\nDisease found: {disease_to_analyze}")
+    analyze_precautions(disease_to_analyze)
+    show_description(disease_to_analyze)
+    show_severity(disease_to_analyze)
+else:
+    print("\nNo disease found matching the provided symptoms with at least 80% accuracy.")
+    print("Fetching data from open source...")
+    disease_to_analyze = fetch_disease_info([symptom.strip() for symptom in user_symptoms])
+    if disease_to_analyze:
+        print(f"\nDisease found from open source: {disease_to_analyze}")
+        analyze_precautions(disease_to_analyze)
+        show_description(disease_to_analyze)
+        show_severity(disease_to_analyze)
+    else:
+        print("\nNo disease found from open source matching the provided symptoms.")
